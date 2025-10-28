@@ -1,61 +1,95 @@
+"""Inventory management system module."""
+
 import json
-import logging
 from datetime import datetime
+import ast
 
-# Global variable
-stock_data = {}
 
-def addItem(item="default", qty=0, logs=[]):
-    if not item:
-        return
-    stock_data[item] = stock_data.get(item, 0) + qty
-    logs.append("%s: Added %d of %s" % (str(datetime.now()), qty, item))
+class Inventory:
+    """Class representing a simple inventory management system."""
 
-def removeItem(item, qty):
-    try:
-        stock_data[item] -= qty
-        if stock_data[item] <= 0:
-            del stock_data[item]
-    except:
-        pass
+    def __init__(self):
+        """Initialize the inventory with empty stock and logs."""
+        self.stock_data = {}
+        self.logs = None
 
-def getQty(item):
-    return stock_data[item]
+    def add_item(self, item: str, qty: int):
+        """Add an item and quantity to the inventory with validation."""
+        if self.logs is None:
+            self.logs = []
 
-def loadData(file="inventory.json"):
-    f = open(file, "r")
-    global stock_data
-    stock_data = json.loads(f.read())
-    f.close()
+        if not isinstance(item, str):
+            raise TypeError(f"Item name must be a string, got {type(item).__name__}")
+        if not isinstance(qty, int):
+            raise TypeError(f"Quantity must be an integer, got {type(qty).__name__}")
+        if qty <= 0:
+            raise ValueError("Quantity must be greater than zero")
 
-def saveData(file="inventory.json"):
-    f = open(file, "w")
-    f.write(json.dumps(stock_data))
-    f.close()
+        self.stock_data[item] = self.stock_data.get(item, 0) + qty
+        log_entry = f"{datetime.now():%Y-%m-%d %H:%M:%S}: Added {qty} of {item}"
+        self.logs.append(log_entry)
+        print(log_entry)
+        return True
 
-def printData():
-    print("Items Report")
-    for i in stock_data:
-        print(i, "->", stock_data[i])
+    def remove_item(self, item, qty):
+        """Remove a quantity of an item from the inventory."""
+        try:
+            self.stock_data[item] -= qty
+            if self.stock_data[item] <= 0:
+                del self.stock_data[item]
+        except KeyError:
+            print(f"Item '{item}' not found in stock.")
+        except TypeError:
+            print("Invalid quantity type.")
+        # except Exception as err:
+        #     print(f"Unexpected error: {err}")
 
-def checkLowItems(threshold=5):
-    result = []
-    for i in stock_data:
-        if stock_data[i] < threshold:
-            result.append(i)
-    return result
+    def get_qty(self, item):
+        """Return the quantity of a specific item."""
+        return self.stock_data.get(item, 0)
+
+    def load_data(self, file="inventory.json"):
+        """Load inventory data from a JSON file."""
+        with open(file, "r", encoding="utf-8") as f:
+            self.stock_data = json.load(f)
+
+    def save_data(self, file="inventory.json"):
+        """Save inventory data to a JSON file."""
+        with open(file, "w", encoding="utf-8") as f:
+            json.dump(self.stock_data, f, indent=4)
+
+    def print_data(self):
+        """Print the current inventory."""
+        print("Items Report")
+        for item, qty in self.stock_data.items():
+            print(f"{item} -> {qty}")
+
+    def check_low_items(self, threshold=5):
+        """Return a list of items with quantity below a threshold."""
+        return [item for item, qty in self.stock_data.items() if qty < threshold]
+
 
 def main():
-    addItem("apple", 10)
-    addItem("banana", -2)
-    addItem(123, "ten")  # invalid types, no check
-    removeItem("apple", 3)
-    removeItem("orange", 1)
-    print("Apple stock:", getQty("apple"))
-    print("Low items:", checkLowItems())
-    saveData()
-    loadData()
-    printData()
-    eval("print('eval used')")  # dangerous
+    """Main function to demonstrate inventory operations."""
+    inv = Inventory()
+    try:
+        inv.add_item("apple", 10)
+        inv.add_item("banana", 2)
+        inv.add_item("orange", 1)
+        inv.remove_item("apple", 3)
+        print("Apple stock:", inv.get_qty("apple"))
+        print("Low items:", inv.check_low_items())
+        inv.save_data()
+        inv.load_data()
+        inv.print_data()
+    except (TypeError, ValueError) as err:
+        print(f"Error: {err}")
 
-main()
+    # Safe eval replacement example
+    data_str = "{'status': 'ok'}"
+    safe_data = ast.literal_eval(data_str)
+    print(safe_data)
+
+
+if __name__ == "__main__":
+    main()
